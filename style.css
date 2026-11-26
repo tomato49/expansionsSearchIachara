@@ -268,23 +268,36 @@
   }
   .add-btn:hover { background: rgba(124,106,247,0.22); }
 
-  .skill-threshold-row {
-    display: flex;
+  .skill-threshold-row { margin-bottom: 12px; }
+
+  .skill-thresh-field {
+    display: inline-flex;
     align-items: center;
-    gap: 8px;
-    margin-bottom: 10px;
+    gap: 5px;
   }
-  .skill-thresh-label {
+  .skill-thresh-num {
+    width: 44px;
+    flex: none;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--accent2);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    padding: 3px 4px;
+    text-align: right;
+    outline: none;
+    transition: border-color 0.15s;
+    -moz-appearance: textfield;
+  }
+  .skill-thresh-num:focus { border-color: var(--accent); }
+  .skill-thresh-num::-webkit-inner-spin-button,
+  .skill-thresh-num::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+
+  .skill-thresh-unit {
     font-size: 11px;
     color: var(--text2);
     white-space: nowrap;
-  }
-  .skill-thresh-val {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 11px;
-    color: var(--accent2);
-    min-width: 28px;
-    text-align: right;
   }
 
   .filter-tags { display: flex; flex-wrap: wrap; gap: 4px; }

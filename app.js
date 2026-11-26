@@ -256,14 +256,46 @@ comboInput.addEventListener('keydown', e => {
 });
 
 // ===== Skill threshold =====
-document.getElementById('skillThreshold').addEventListener('input', e => {
-  document.getElementById('skillThreshVal').textContent = e.target.value + '以上';
+// スライダーと数値入力は連動する。数値は 0〜100 の整数に補正する。
+const threshSlider = document.getElementById('skillThreshold');
+const threshNum = document.getElementById('skillThreshNum');
+
+function parseThreshold(v) {
+  const n = parseInt(v, 10);
+  return Number.isNaN(n) ? null : Math.min(100, Math.max(0, n));
+}
+
+// 数値欄の内容を補正して、スライダーにも反映し、確定した値を返す
+function commitThreshold() {
+  const v = parseThreshold(threshNum.value);
+  const value = v === null ? parseInt(threshSlider.value, 10) : v;
+  threshNum.value = value;
+  threshSlider.value = value;
+  return value;
+}
+
+threshSlider.addEventListener('input', () => {
+  threshNum.value = threshSlider.value;
+});
+
+threshNum.addEventListener('input', () => {
+  // 入力途中(空欄など)は触らず、数値として読めるときだけスライダーを動かす
+  const v = parseThreshold(threshNum.value);
+  if (v !== null) threshSlider.value = v;
+});
+threshNum.addEventListener('change', commitThreshold);
+threshNum.addEventListener('focus', () => threshNum.select());
+threshNum.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    document.getElementById('addSkillFilter').click();
+  }
 });
 
 document.getElementById('addSkillFilter').addEventListener('click', () => {
   const name = selectedSkillName || comboInput.value.trim();
   if (!name) return;
-  const threshold = parseInt(document.getElementById('skillThreshold').value);
+  const threshold = commitThreshold();
   if (skillFilters.some(f => f.name === name)) return;
   skillFilters.push({ name, threshold });
   selectedSkillName = '';
