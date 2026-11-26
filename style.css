@@ -445,10 +445,8 @@
     font-size: 12px;
     padding: 2px 7px;
     border-radius: 4px;
-    background: color-mix(in srgb, var(--surface) 3%, transparent);
+    background: color-mix(in srgb, var(--surface) 30%, transparent);
     color: var(--text2);
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
     display: inline-block;
   }
   .derived-chip b { color: var(--text); font-weight: 700; }
@@ -480,10 +478,8 @@
     font-size: 10px;
     padding: 2px 7px;
     border-radius: 4px;
-    background: color-mix(in srgb, var(--surface) 3%, transparent);
+    background: color-mix(in srgb, var(--surface) 30%, transparent);
     color: var(--text2);
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
     text-align: center;
   }
   .ability-chip b { color: var(--text); font-weight: 700; }
@@ -497,8 +493,6 @@
     background: var(--skill-bg);
     border: 1px solid var(--skill);
     color: var(--skill);
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
   }
   .skill-pill.highlight {
     background: var(--accent-bg);

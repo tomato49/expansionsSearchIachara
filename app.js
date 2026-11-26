@@ -591,6 +591,7 @@ function renderCards() {
     if (iconUrl) {
       const bg = document.createElement('img');
       bg.className = 'card-bg';
+      bg.decoding = 'async';
       bg.src = iconUrl;
       bg.setAttribute('referrerpolicy', 'no-referrer');
       bg.setAttribute('alt', '');
