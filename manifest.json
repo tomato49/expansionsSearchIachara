@@ -1,0 +1,61 @@
+{
+  "manifest_version": 3,
+  "name": "いあきゃら✦探索者検索",
+  "version": "0.1.0",
+  "description": "いあきゃらのマイページのキャラクターデータを使って、探索者を検索・フィルタリングします。",
+  "permissions": [
+    "storage"
+  ],
+  "host_permissions": [
+    "https://iachara.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://iachara.com/*"
+      ],
+      "js": [
+        "inject.js"
+      ],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": [
+        "https://iachara.com/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_start"
+    }
+  ],
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "action": {
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    },
+    "default_title": "いあきゃら✦探索者検索を開く"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "icons/icon48.png"
+      ],
+      "matches": [
+        "https://iachara.com/*"
+      ]
+    }
+  ]
+}

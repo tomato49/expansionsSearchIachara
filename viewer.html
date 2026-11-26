@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>いあきゃら✦探索者検索</title>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;500;700&family=Space+Mono:wght@400;700&family=IBM+Plex+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐙</text></svg>">
+<link rel="icon" href="icon.svg?v=2" type="image/svg+xml">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="layout">
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-section">
+      <div class="sec-label">キャラクター検索</div>
+      <input type="text" class="search-input" id="nameSearch" placeholder="名前・フリガナ" />
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sec-label">正気度フィルター</div>
+      <div class="ability-row">
+        <div class="ability-head">
+          <span class="ability-name">SAN</span>
+          <span class="ability-val" id="abval-SAN">指定なし</span>
+        </div>
+        <input type="range" id="sanRange" min="0" max="99" value="0" step="1" />
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sec-label">能力値フィルター</div>
+      <div id="abilityFilters"></div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sec-label">技能フィルター</div>
+      <div class="skill-filter-row" style="flex-direction:column;">
+      <div class="skill-combo">
+        <input type="text" class="skill-combo-input" id="skillComboInput" placeholder="技能を検索..." autocomplete="off" />
+        <div class="skill-dropdown" id="skillDropdown"></div>
+      </div>
+      </div>
+      <div class="skill-threshold-row">
+        <span class="skill-thresh-label">閾値：</span>
+        <input type="range" id="skillThreshold" min="0" max="100" value="50" step="1" style="flex:1;" />
+        <span class="skill-thresh-val" id="skillThreshVal">50以上</span>
+      </div>
+      <button class="add-btn" id="addSkillFilter" style="width:100%;text-align:center;margin-bottom:8px;">+ 追加</button>
+      <div class="filter-tags" id="skillFilterTags"></div>
+    </div>
+
+    <div class="sidebar-section">
+      <button class="reset-btn" id="resetBtn">フィルターをリセット</button>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;">
+        <span style="font-size:12px;color:var(--text2);">ロスト探索者を表示</span>
+        <label style="position:relative;display:inline-block;width:36px;height:20px;cursor:pointer;">
+          <input type="checkbox" id="showLost" checked style="opacity:0;width:0;height:0;position:absolute;" />
+          <span id="toggleTrack" style="position:absolute;inset:0;border-radius:20px;background:var(--red);transition:background 0.2s;"></span>
+          <span id="toggleThumb" style="position:absolute;top:3px;left:3px;width:14px;height:14px;border-radius:50%;background:#fff;transition:transform 0.2s;transform:translateX(16px);"></span>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div class="main">
+    <div class="header">
+      <div style="flex:1;display:flex;align-items:center;gap:8px;justify-content:flex-start;">
+        <div class="ver-tabs" style="width:auto;">
+          <button class="ver-tab" data-ver="7" style="font-size:14px;padding:6px 18px;">7版</button>
+          <button class="ver-tab active" data-ver="6" style="font-size:14px;padding:6px 18px;">6版</button>
+        </div>
+        <button class="theme-btn" id="themeBtn">☀ ライト</button>
+      </div>
+      <div class="header-title"><span style="margin-right:6px;font-size:12px;">✦</span><span style="font-size:14px;color:var(--accent2);">いあきゃら</span><span style="margin-left:6px;font-size:12px;">✦</span><img src="icon.svg?v=2" class="header-icon" style="width:32px;height:32px;vertical-align:middle;margin:0 6px;"><span style="margin-right:6px;font-size:12px;">✦</span>探索者検索<span style="margin-left:6px;font-size:12px;">✦</span></div>
+      <div style="flex:1;display:flex;justify-content:flex-end;align-items:center;gap:8px;">
+        <button class="help-btn" id="helpBtn" data-tooltip="使い方">?</button>
+      </div>
+    </div>
+    <div class="main-header">
+      <span class="result-count" id="resultCount">データなし</span>
+    </div>
+    <div id="pasteArea" class="paste-area">
+      <div class="paste-input-area">
+        <div class="paste-icon">{  }</div>
+        <div class="paste-title">データがありません</div>
+        <div class="paste-sub"><a href="https://iachara.com/mypage" target="_blank" rel="noopener" class="guide-link">いあきゃらのマイページ</a>を開き、<br>左下のアイコンから開いてください</div>
+      </div>
+    </div>
+    <div id="cardGrid" class="card-grid" style="display:none;"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Help Modal -->
+<div class="help-overlay" id="helpOverlay">
+  <div class="help-modal">
+    <div class="help-modal-header">
+      <span class="help-modal-title">✦ 使い方ガイド</span>
+      <button class="help-modal-close" id="helpClose">✕</button>
+    </div>
+    <div class="help-modal-body">
+
+      <div class="help-section">
+        <div class="help-section-label">版の切り替え</div>
+        <div class="help-section-content">
+          ヘッダー左の <span class="help-badge">7版</span> <span class="help-badge">6版</span> タブで切り替えます。版ごとに能力値の体系・スケールが異なるため、フィルター条件と技能フィルターはリセットされます。
+        </div>
+      </div>
+
+      <div class="help-section">
+        <div class="help-section-label">キャラクター検索</div>
+        <div class="help-section-content">
+          サイドバー上部の検索欄に名前またはフリガナの一部を入力すると部分一致する探索者のみ表示されます。
+        </div>
+      </div>
+
+      <div class="help-section">
+        <div class="help-section-label">正気度・能力値フィルター</div>
+        <div class="help-section-content">
+          各スライダーを右に動かすと「指定値以上」の探索者のみ表示されます。<span class="help-mono">指定なし</span>（値 0）の場合はフィルター無効です。6版の能力値は3d6スケール（最大18〜21）、7版は百分率スケール（最大90〜99）です。
+        </div>
+      </div>
+
+      <div class="help-section">
+        <div class="help-section-label">技能フィルター</div>
+        <div class="help-section-content">
+          技能名を検索欄から選択し、閾値スライダーで最低値を設定してから「＋ 追加」をクリックします。複数の技能を同時に指定でき、<strong>すべての条件を満たす</strong>探索者のみ表示されます。追加済みのタグの <span class="help-mono">×</span> で個別削除できます。<br>
+          <strong>【操縦・芸術・製作・運転・近接戦闘・射撃・言語・科学・母国語】</strong>は例えば<span class="help-mono">芸術</span>で指定すると<span class="help-mono">芸術(料理)、芸術(演奏)、芸術(絵画)...</span>を一括照合します。
+        </div>
+      </div>
+
+      <div class="help-section">
+        <div class="help-section-label">ロスト探索者の表示</div>
+        <div class="help-section-content">
+          サイドバー下部のトグルで、<span class="help-red">ロスト</span>フラグが立った探索者の表示／非表示を切り替えます。ロストカードは左端に赤いボーダーが付きます。
+        </div>
+      </div>
+
+      <div class="help-section">
+        <div class="help-section-label">データの取得・更新</div>
+        <div class="help-section-content">
+          いあきゃらのマイページを開いた時点のキャラクターデータが使われます。データはブラウザを閉じると消えます。<br>
+          最新の状態に更新したい場合は、マイページを再読み込みしてから、右下の 左下のアイコンを押してください。
+        </div>
+      </div>
+
+      <div class="help-section">
+        <div class="help-section-label">テーマ切り替え</div>
+        <div class="help-section-content">
+          ヘッダーの <span class="help-mono">☀ ライト</span> ／ <span class="help-mono">☽ ダーク</span> ボタンでカラーテーマを切り替えます。
+        </div>
+      </div>
+
+      <div class="help-section">
+        <div class="help-section-label">その他</div>
+        <div class="help-section-content">
+          問題や要望がある場合はX（旧Twitter）で <a href="https://x.com/ac8_e9" target="_blank" rel="noopener" class="guide-link">@ac8_e9 トマト🍅</a> までご連絡ください。
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+<script src="app.js"></script>
+</body>
+</html>
