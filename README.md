@@ -15,7 +15,7 @@
 
 ## インストール方法
 
-ストアには公開していないので、手動で読み込みます。ChromeとEdgeで使えます。
+ストアには公開していないので、手動で読み込みます。Chromium系のブラウザで使えます。
 
 1. このページの [Releases](../../releases) から最新の `coc-ext.zip` をダウンロードして、解凍する
 2. Chromeで `chrome://extensions` を開く（Edgeは `edge://extensions`）
