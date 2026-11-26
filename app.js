@@ -22,7 +22,8 @@ const VER_CONFIG = {
 
 // ===== Parse JSON =====
 function loadChars(parsed) {
-  allChars = parsed;
+  // APIは作成日の古い順で返すので、新しい順に並べ替えて表示する
+  allChars = [...parsed].reverse();
   document.getElementById('pasteArea').style.display = 'none';
   document.getElementById('cardGrid').style.display = 'grid';
   buildSkillSelect();
