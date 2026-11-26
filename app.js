@@ -9,8 +9,7 @@ const VER_CONFIG = {
   '7': {
     abilities: ['STR','CON','POW','DEX','APP','SIZ','INT','EDU','LUK'],
     abMax: 90,
-    abMaxOverride: { EDU: 105
-     },
+    abMaxOverride: { EDU: 105 },
     abilityKeys: { STR:'str', CON:'con', POW:'pow', DEX:'dex', APP:'app', SIZ:'siz', INT:'int', EDU:'edu', LUK:'luck' }
   },
   '6': {
@@ -20,15 +19,6 @@ const VER_CONFIG = {
     abilityKeys: { STR:'str', CON:'con', POW:'pow', DEX:'dex', APP:'app', SIZ:'siz', INT:'int', EDU:'edu' }
   }
 };
-
-// ===== Toast =====
-function showToast(msg, type = '') {
-  const toast = document.getElementById('toast');
-  toast.textContent = msg;
-  toast.className = 'toast' + (type ? ' ' + type : '');
-  toast.classList.add('show');
-  setTimeout(() => toast.classList.remove('show'), 3000);
-}
 
 // ===== Parse JSON =====
 function loadChars(parsed) {
