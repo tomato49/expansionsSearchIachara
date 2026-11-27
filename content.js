@@ -33,6 +33,55 @@ window.addEventListener('message', (e) => {
 
 const isMyPage = () => location.pathname.startsWith('/mypage');
 
+// 拡張機能が更新・再読み込みされると、開きっぱなしのタブに残った古いスクリプトは
+// 拡張機能本体と繋がらなくなる(chrome.runtime.id が消える)。その状態を検出する。
+const STALE_LABEL = '拡張機能が更新されました。クリックでページを再読み込みします';
+let stale = false;
+
+function isContextValid() {
+  try {
+    return !!(chrome.runtime && chrome.runtime.id);
+  } catch (_) {
+    return false;
+  }
+}
+
+function markStale() {
+  stale = true;
+  const btn = document.getElementById(BTN_ID);
+  if (btn) applyState(btn);
+}
+
+function isInvalidatedError(err) {
+  return /context invalidated/i.test(String((err && err.message) || err));
+}
+
+function onSendError(err) {
+  // 「Extension context invalidated」のほか、chrome.runtime 自体が消えた場合も同じ扱いにする
+  if (isInvalidatedError(err) || !isContextValid()) {
+    markStale();
+    location.reload();
+  } else {
+    console.warn('[いあきゃら✦探索者検索]', err);
+  }
+}
+
+function openViewer() {
+  // 繋がりが切れていたら、再読み込みして新しい拡張機能につなぎ直す
+  if (stale || !isContextValid()) {
+    markStale();
+    location.reload();
+    return;
+  }
+  if (!latest) return;
+  try {
+    const p = chrome.runtime.sendMessage({ type: 'OPEN_VIEWER', data: latest });
+    if (p && typeof p.catch === 'function') p.catch(onSendError);
+  } catch (err) {
+    onSendError(err);
+  }
+}
+
 function createButton() {
   const btn = document.createElement('button');
   btn.id = BTN_ID;
@@ -56,11 +105,25 @@ function createButton() {
 
   btn.addEventListener('mouseenter', () => { if (!btn.disabled) btn.style.transform = 'scale(1.08)'; });
   btn.addEventListener('mouseleave', () => { btn.style.transform = ''; });
-  btn.addEventListener('click', () => {
-    if (!latest) return;
-    chrome.runtime.sendMessage({ type: 'OPEN_VIEWER', data: latest });
-  });
+  btn.addEventListener('click', openViewer);
   return btn;
+}
+
+// ボタンの見た目(有効/無効・説明文)を、今の状態に合わせる
+function applyState(btn) {
+  let label, enabled;
+  if (stale) {
+    label = STALE_LABEL; enabled = true;
+  } else if (latest) {
+    label = 'いあきゃら✦探索者検索を開く'; enabled = true;
+  } else {
+    label = 'データ取得待ち…'; enabled = false;
+  }
+  btn.disabled = !enabled;
+  btn.style.opacity = enabled ? '1' : '.5';
+  btn.style.cursor = enabled ? 'pointer' : 'default';
+  btn.title = label;
+  btn.setAttribute('aria-label', label);
 }
 
 // Next.jsのSPA遷移に対応するため、定期的に状態を合わせる
@@ -68,12 +131,13 @@ function updateButton() {
   let btn = document.getElementById(BTN_ID);
   if (!isMyPage()) { if (btn) btn.remove(); return; }
   if (!document.body) return;
-  if (!btn) { btn = createButton(); document.body.append(btn); }
-  btn.disabled = !latest;
-  btn.style.opacity = latest ? '1' : '.5';
-  btn.style.cursor = latest ? 'pointer' : 'default';
-  const label = latest ? 'いあきゃら✦探索者検索を開く' : 'データ取得待ち…';
-  btn.title = label;
-  btn.setAttribute('aria-label', label);
+  if (!stale && !isContextValid()) stale = true;
+  // 拡張機能と切れている間は、新しいボタンを作らない(chrome.runtime.getURL が例外になるため)
+  if (!btn) {
+    if (stale) return;
+    btn = createButton();
+    document.body.append(btn);
+  }
+  applyState(btn);
 }
 setInterval(updateButton, 1000);

@@ -20,6 +20,14 @@ const VER_CONFIG = {
   }
 };
 
+// ===== HTMLエスケープ =====
+// 名前などを innerHTML に入れる前に通す(< & " が含まれても表示が崩れないように)
+function esc(v) {
+  return String(v ?? '').replace(/[&<>"']/g, c => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+  ));
+}
+
 // ===== Parse JSON =====
 function loadChars(parsed) {
   // APIは作成日の古い順で返すので、新しい順に並べ替えて表示する
@@ -41,19 +49,37 @@ document.querySelectorAll('.ver-tab').forEach(btn => {
     abilityMinMap = {};
     skillFilters = [];
     document.getElementById('skillFilterTags').innerHTML = '';
+    resetSanUI();
     renderAbilityFilters();
     buildSkillSelect();
     renderCards();
   });
 });
 
+// スライダー等の連続入力で何度も全カードを描き直さないよう、1フレームに1回へまとめる
+let renderQueued = false;
+function requestRender() {
+  if (renderQueued) return;
+  renderQueued = true;
+  requestAnimationFrame(() => {
+    renderQueued = false;
+    renderCards();
+  });
+}
+
 // ===== SAN filter =====
 document.getElementById('sanRange').addEventListener('input', e => {
   const v = parseInt(e.target.value);
   abilityMinMap['SAN'] = v;
   document.getElementById('abval-SAN').textContent = v > 0 ? v + '以上' : '指定なし';
-  renderCards();
+  requestRender();
 });
+
+// SANスライダーの表示を初期状態に戻す(絞り込み条件の側は abilityMinMap で管理)
+function resetSanUI() {
+  document.getElementById('sanRange').value = 0;
+  document.getElementById('abval-SAN').textContent = '指定なし';
+}
 
 // ===== Ability filters =====
 function renderAbilityFilters() {
@@ -75,7 +101,7 @@ function renderAbilityFilters() {
       const v = parseInt(e.target.value);
       abilityMinMap[ab] = v;
       document.getElementById('abval-' + ab).textContent = v > 0 ? v + '以上' : '指定なし';
-      renderCards();
+      requestRender();
     });
     container.appendChild(div);
   });
@@ -107,25 +133,6 @@ const CAT_LABELS = {
   negotiationSkills: '交渉技能'
 };
 const CAT_ORDER = ['actionSkills','battleSkills','searchSkills','knowledgeSkills','negotiationSkills'];
-
-function buildSkillSelect() {
-  const sel = document.getElementById('skillSelect');
-  sel.innerHTML = '<option value="">技能を選択...</option>';
-  const bycat = collectSkillsByCategory();
-  CAT_ORDER.forEach(cat => {
-    const names = bycat[cat];
-    if (!names || names.length === 0) return;
-    const grp = document.createElement('optgroup');
-    grp.label = CAT_LABELS[cat];
-    names.sort((a,b) => a.localeCompare(b, 'ja')).forEach(s => {
-      const opt = document.createElement('option');
-      opt.value = s;
-      opt.textContent = s;
-      grp.appendChild(opt);
-    });
-    sel.appendChild(grp);
-  });
-}
 
 function collectSkillsByCategory() {
   const result = {};
@@ -188,7 +195,7 @@ function renderDropdown(query) {
       html += `<div class="skill-dropdown-group">${CAT_LABELS[o.cat]}</div>`;
       lastCat = o.cat;
     }
-    html += `<div class="skill-dropdown-item" data-name="${o.name}" data-i="${i}">${o.name}</div>`;
+    html += `<div class="skill-dropdown-item" data-name="${esc(o.name)}" data-i="${i}">${esc(o.name)}</div>`;
   });
   dropdown.innerHTML = html;
   activeIndex = -1;
@@ -201,13 +208,9 @@ function renderDropdown(query) {
   });
 }
 
-let suppressInput = false;
-
 function selectSkill(name) {
   selectedSkillName = name;
-  suppressInput = true;
   document.getElementById('skillComboInput').value = name;
-  suppressInput = false;
   document.getElementById('skillDropdown').classList.remove('open');
 }
 
@@ -222,7 +225,6 @@ comboInput.addEventListener('blur', () => {
   setTimeout(() => dropdown.classList.remove('open'), 150);
 });
 comboInput.addEventListener('input', () => {
-  if (suppressInput) return;
   selectedSkillName = '';
   renderDropdown(comboInput.value);
   dropdown.classList.add('open');
@@ -311,7 +313,7 @@ function renderSkillTags() {
   skillFilters.forEach((f, i) => {
     const tag = document.createElement('div');
     tag.className = 'filter-tag';
-    tag.innerHTML = `${f.name} ≥${f.threshold}<span class="filter-tag-remove" data-i="${i}">×</span>`;
+    tag.innerHTML = `${esc(f.name)} ≥${f.threshold}<span class="filter-tag-remove" data-i="${i}">×</span>`;
     tag.querySelector('.filter-tag-remove').addEventListener('click', () => {
       skillFilters.splice(i, 1);
       renderSkillTags();
@@ -341,7 +343,7 @@ showLostCb.addEventListener('change', () => {
 });
 
 // ===== Name search =====
-document.getElementById('nameSearch').addEventListener('input', renderCards);
+document.getElementById('nameSearch').addEventListener('input', requestRender);
 
 // ===== Reset =====
 document.getElementById('resetBtn').addEventListener('click', () => {
@@ -349,11 +351,26 @@ document.getElementById('resetBtn').addEventListener('click', () => {
   skillFilters = [];
   document.getElementById('nameSearch').value = '';
   document.getElementById('skillFilterTags').innerHTML = '';
-  document.getElementById('sanRange').value = 0;
-  document.getElementById('abval-SAN').textContent = '指定なし';
+  resetSanUI();
   renderAbilityFilters();
   renderCards();
 });
+
+// ===== 技能1件の合計値 =====
+// 合計値(sumPoint)が無いときは各ポイントから計算する。
+// 母国語・回避は初期値が未設定(0)のとき、能力値から補う。
+function calcSkillValue(ch, sk) {
+  const extra = (sk.professionPoint||0) + (sk.interestPoint||0) + (sk.growthPoint||0) + (sk.otherPoint||0);
+  const noDefault = sk.defaultPoint === undefined || sk.defaultPoint === 0;
+  if (sk.name === '母国語' && noDefault) {
+    return getAbilityValue(ch, 'edu') * (currentVer === '7' ? 1 : 5) + extra;
+  }
+  if (sk.name === '回避' && noDefault) {
+    const dex = getAbilityValue(ch, 'dex');
+    return (currentVer === '7' ? Math.floor(dex / 2) : dex * 2) + extra;
+  }
+  return sk.sumPoint !== undefined ? sk.sumPoint : (sk.defaultPoint||0) + extra;
+}
 
 // ===== Get skill value =====
 function getSkillValue(ch, rawName) {
@@ -366,21 +383,9 @@ function getSkillValue(ch, rawName) {
     const all = [...(skills.static || []), ...(skills.additional || [])];
     for (const sk of all) {
       const match = isGroup ? sk.name === rawName : skillFullName(sk) === rawName;
-      if (match) {
-        let val = sk.sumPoint !== undefined ? sk.sumPoint :
-          (sk.defaultPoint||0) + (sk.professionPoint||0) + (sk.interestPoint||0) + (sk.growthPoint||0) + (sk.otherPoint||0);
-        // Ability-based default value calculation
-        if (sk.name === '母国語' && (sk.defaultPoint === undefined || sk.defaultPoint === 0)) {
-          const edu = getAbilityValue(ch, 'edu');
-          const base = edu * (currentVer === '7' ? 1 : 5);
-          val = base + (sk.professionPoint||0) + (sk.interestPoint||0) + (sk.growthPoint||0) + (sk.otherPoint||0);
-        } else if (sk.name === '回避' && (sk.defaultPoint === undefined || sk.defaultPoint === 0)) {
-          const dex = getAbilityValue(ch, 'dex');
-          const base = currentVer === '7' ? Math.floor(dex / 2) : dex * 2;
-          val = base + (sk.professionPoint||0) + (sk.interestPoint||0) + (sk.growthPoint||0) + (sk.otherPoint||0);
-        }
-        if (best === null || val > best) best = val;
-      }
+      if (!match) continue;
+      const val = calcSkillValue(ch, sk);
+      if (best === null || val > best) best = val;
     }
   }
   return best;
@@ -397,24 +402,12 @@ function getAbilityValue(ch, abKey) {
 // ===== Get top skills =====
 function getTopSkills(ch, highlightNames) {
   const d = ch.data;
-  const cats = ['actionSkills','battleSkills','searchSkills','knowledgeSkills','negotiationSkills'];
   const all = [];
-  cats.forEach(cat => {
+  CAT_ORDER.forEach(cat => {
     const skills = d[cat];
     if (!skills) return;
     [...(skills.static||[]), ...(skills.additional||[])].forEach(sk => {
-      let val = sk.sumPoint !== undefined ? sk.sumPoint :
-        (sk.defaultPoint||0)+(sk.professionPoint||0)+(sk.interestPoint||0)+(sk.growthPoint||0)+(sk.otherPoint||0);
-      // Ability-based default value calculation
-      if (sk.name === '母国語' && (sk.defaultPoint === undefined || sk.defaultPoint === 0)) {
-        const edu = getAbilityValue(ch, 'edu');
-        const base = edu * (currentVer === '7' ? 1 : 5);
-        val = base + (sk.professionPoint||0) + (sk.interestPoint||0) + (sk.growthPoint||0) + (sk.otherPoint||0);
-      } else if (sk.name === '回避' && (sk.defaultPoint === undefined || sk.defaultPoint === 0)) {
-        const dex = getAbilityValue(ch, 'dex');
-        const base = currentVer === '7' ? Math.floor(dex / 2) : dex * 2;
-        val = base + (sk.professionPoint||0) + (sk.interestPoint||0) + (sk.growthPoint||0) + (sk.otherPoint||0);
-      }
+      const val = calcSkillValue(ch, sk);
       const fullName = skillDisplayName(sk);
       const baseName = fullName.replace(/（.*）$/, '');
       const isHighlighted = highlightNames.has(fullName) || (GROUP_SKILLS.has(baseName) && highlightNames.has(baseName));
@@ -435,18 +428,19 @@ function getTopSkills(ch, highlightNames) {
 function renderCards() {
   const cfg = VER_CONFIG[currentVer];
   const nameQ = document.getElementById('nameSearch').value.trim().toLowerCase();
+  const showLost = showLostCb.checked;
 
   const filtered = allChars.filter(ch => {
     const ver = (ch.data?.version || '7th').startsWith(currentVer);
     if (!ver) return false;
 
     // Name search
-    const name = (ch.data?.profile?.name || ch.name || '').toLowerCase();
+    const name = (ch.data?.profile?.name || '').toLowerCase();
     const furi = (ch.data?.profile?.furi || '').toLowerCase();
     if (nameQ && !name.includes(nameQ) && !furi.includes(nameQ)) return false;
 
     // Lost filter
-    if (!document.getElementById('showLost').checked && ch.data?.profile?.isLost) return false;
+    if (!showLost && ch.data?.profile?.isLost) return false;
 
     // Ability filters
     for (const [ab, minVal] of Object.entries(abilityMinMap)) {
@@ -485,7 +479,7 @@ function renderCards() {
   grid.innerHTML = '';
   filtered.forEach(ch => {
     const prof = ch.data?.profile || {};
-    const name = prof.name || ch.name || '不明';
+    const name = prof.name || '不明';
     const furi = prof.furi || '';
     const age = prof.age || '';
     const sex = prof.sex || '';
@@ -494,11 +488,7 @@ function renderCards() {
     const sanVal = ch.data?.abilities?.sanCurrent ?? '';
 
     // Card background image
-    const initials = name.replace(/[（(].*/, '').trim().slice(0,2);
     const iconUrl = prof.icons?.[0]?.url || '';
-    const cardBgHtml = iconUrl
-      ? `<img class="card-bg" src="${iconUrl}" alt="" referrerpolicy="no-referrer" />`
-      : '';
 
     // Abilities
     const abChips = cfg.abilities.map(ab => {
@@ -507,7 +497,6 @@ function renderCards() {
       return `<div class="ability-chip">${ab} <b>${val}</b></div>`;
     }).join('');
 
-    // DB計算
     const str = getAbilityValue(ch, 'str');
     const siz = getAbilityValue(ch, 'siz');
     // HP・MP計算
@@ -528,7 +517,7 @@ function renderCards() {
     }
 
     // DB計算
-    const strSizRaw = currentVer === '7' ? str + siz : str + siz;
+    const strSizRaw = str + siz;
     let db;
     if (currentVer === '7') {
       if (strSizRaw <= 64) db = '-2';
@@ -554,7 +543,7 @@ function renderCards() {
       // GROUP_SKILLSのフィルターは親名だけで照合
       const baseName = s.name.replace(/（.*）$/, '');
       const isHl = hlNames.has(s.name) || (GROUP_SKILLS.has(baseName) && hlNames.has(baseName));
-      return `<span class="skill-pill${isHl ? ' highlight' : ''}">${s.name} ${s.val}</span>`;
+      return `<span class="skill-pill${isHl ? ' highlight' : ''}">${esc(s.name)} ${s.val}</span>`;
     }).join('');
 
     const subParts = [];
@@ -570,21 +559,21 @@ function renderCards() {
         <div style="flex:1;min-width:0;">
           <div style="display:flex;align-items:center;gap:5px;margin-bottom:4px;">
             <div class="ver-badge">${currentVer}版</div>
-            <a href="https://iachara.com/view/${ch.id}" target="_blank" rel="noopener" title="キャラクターページを開く" class="ext-link">
+            <a href="https://iachara.com/view/${esc(ch.id)}" target="_blank" rel="noopener" title="キャラクターページを開く" class="ext-link">
               <span style="font-size:10px;">いあきゃらへ</span>
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
             </a>
           </div>
-          <div class="card-name">${name}</div>
-          ${subParts.length ? `<div class="card-sub">${subParts.join(' ｜ ')}</div>` : ''}
+          <div class="card-name">${esc(name)}</div>
+          ${subParts.length ? `<div class="card-sub">${subParts.map(esc).join(' ｜ ')}</div>` : ''}
         </div>
       </div>
-      ${sanVal !== '' || true ? `<div style="display:flex;gap:4px;margin-bottom:4px;margin-top:-4px;position:relative;z-index:1;">
+      <div style="display:flex;gap:4px;margin-bottom:4px;margin-top:-4px;position:relative;z-index:1;">
         ${sanVal !== '' ? `<div class="san-chip">SAN <b>${sanVal}</b></div>` : ''}
         <div class="derived-chip">HP <b>${hp}</b></div>
         <div class="derived-chip">MP <b>${mp}</b></div>
         <div class="derived-chip">DB <b>${db}</b></div>
-      </div>` : ''}
+      </div>
       <div class="ability-chips">${abChips}${movChip}</div>
       <div class="skill-pills">${skillHtml || '<span style="font-size:11px;color:var(--text3);">技能データなし</span>'}</div>
     `;

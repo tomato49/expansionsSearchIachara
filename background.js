@@ -36,7 +36,7 @@ async function openViewer(data) {
     const { charaData: old } = await chrome.storage.session.get('charaData');
     const changed = JSON.stringify(old) !== JSON.stringify(data);
     if (changed) {
-      await chrome.storage.session.set({ charaData: data, receivedAt: Date.now() });
+      await chrome.storage.session.set({ charaData: data });
     }
     if (tab) {
       if (changed) await chrome.tabs.reload(tab.id);
