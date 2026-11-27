@@ -59,9 +59,4 @@ chrome.runtime.onMessage.addListener((msg, sender) => {
   }
 });
 
-chrome.tabs.onRemoved.addListener(async (tabId) => {
-  const { viewerTabId } = await chrome.storage.session.get('viewerTabId');
-  if (viewerTabId === tabId) await chrome.storage.session.remove('viewerTabId');
-});
-
 chrome.action.onClicked.addListener(() => openViewer(null));

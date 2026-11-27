@@ -28,14 +28,16 @@ function esc(v) {
   ));
 }
 
-// ===== Parse JSON =====
+// 表示中の版(6版/7版)のキャラクターか。バージョン情報が無いデータは 7版 として扱う
+const isCurrentVer = ch => (ch.data?.version || '7th').startsWith(currentVer);
+
+// ===== データの読み込み =====
 function loadChars(parsed) {
   // APIは作成日の古い順で返すので、新しい順に並べ替えて表示する
   allChars = [...parsed].reverse();
-  document.getElementById('pasteArea').style.display = 'none';
+  document.getElementById('noData').style.display = 'none';
   document.getElementById('cardGrid').style.display = 'grid';
   buildSkillSelect();
-  renderAbilityFilters();
   renderCards();
 }
 
@@ -95,7 +97,7 @@ function renderAbilityFilters() {
         <span class="ability-name">${ab}</span>
         <span class="ability-val" id="abval-${ab}">${min > 0 ? min + '以上' : '指定なし'}</span>
       </div>
-      <input type="range" min="0" max="${(cfg.abMaxOverride && cfg.abMaxOverride[ab]) || cfg.abMax}" value="${min}" step="1" data-ab="${ab}" />
+      <input type="range" min="0" max="${(cfg.abMaxOverride && cfg.abMaxOverride[ab]) || cfg.abMax}" value="${min}" step="1" />
     `;
     div.querySelector('input').addEventListener('input', e => {
       const v = parseInt(e.target.value);
@@ -137,20 +139,15 @@ const CAT_ORDER = ['actionSkills','battleSkills','searchSkills','knowledgeSkills
 function collectSkillsByCategory() {
   const result = {};
   CAT_ORDER.forEach(cat => result[cat] = new Set());
-  const chars = allChars.filter(c => (c.data?.version || '7th').startsWith(currentVer));
-  chars.forEach(ch => {
+  allChars.filter(isCurrentVer).forEach(ch => {
     const d = ch.data;
     CAT_ORDER.forEach(cat => {
       const skills = d[cat];
       if (!skills) return;
       [...(skills.static || []), ...(skills.additional || [])].forEach(sk => {
         if (!sk.name) return;
-        // GROUP_SKILLSは親名のみ登録、（）付きは無視
-        if (GROUP_SKILLS.has(sk.name)) {
-          result[cat].add(sk.name);
-        } else {
-          result[cat].add(skillDisplayName(sk));
-        }
+        // GROUP_SKILLSは親名のみ、それ以外は（）込みで登録
+        result[cat].add(skillFullName(sk));
       });
     });
   });
@@ -159,6 +156,8 @@ function collectSkillsByCategory() {
 }
 
 // ===== Custom skill combobox =====
+const comboInput = document.getElementById('skillComboInput');
+const dropdown = document.getElementById('skillDropdown');
 let allSkillOptions = []; // [{cat, name}]
 let selectedSkillName = '';
 let activeIndex = -1;
@@ -174,12 +173,11 @@ function buildSkillSelect() {
     });
   });
   selectedSkillName = '';
-  document.getElementById('skillComboInput').value = '';
+  comboInput.value = '';
   renderDropdown('');
 }
 
 function renderDropdown(query) {
-  const dropdown = document.getElementById('skillDropdown');
   const q = query.trim().toLowerCase();
   const filtered = q ? allSkillOptions.filter(o => o.name.toLowerCase().includes(q)) : allSkillOptions;
 
@@ -190,12 +188,12 @@ function renderDropdown(query) {
 
   let html = '';
   let lastCat = null;
-  filtered.forEach((o, i) => {
+  filtered.forEach(o => {
     if (o.cat !== lastCat) {
       html += `<div class="skill-dropdown-group">${CAT_LABELS[o.cat]}</div>`;
       lastCat = o.cat;
     }
-    html += `<div class="skill-dropdown-item" data-name="${esc(o.name)}" data-i="${i}">${esc(o.name)}</div>`;
+    html += `<div class="skill-dropdown-item" data-name="${esc(o.name)}">${esc(o.name)}</div>`;
   });
   dropdown.innerHTML = html;
   activeIndex = -1;
@@ -210,12 +208,9 @@ function renderDropdown(query) {
 
 function selectSkill(name) {
   selectedSkillName = name;
-  document.getElementById('skillComboInput').value = name;
-  document.getElementById('skillDropdown').classList.remove('open');
+  comboInput.value = name;
+  dropdown.classList.remove('open');
 }
-
-const comboInput = document.getElementById('skillComboInput');
-const dropdown = document.getElementById('skillDropdown');
 
 comboInput.addEventListener('focus', () => {
   renderDropdown(comboInput.value);
@@ -313,7 +308,7 @@ function renderSkillTags() {
   skillFilters.forEach((f, i) => {
     const tag = document.createElement('div');
     tag.className = 'filter-tag';
-    tag.innerHTML = `${esc(f.name)} ≥${f.threshold}<span class="filter-tag-remove" data-i="${i}">×</span>`;
+    tag.innerHTML = `${esc(f.name)} ≥${f.threshold}<span class="filter-tag-remove">×</span>`;
     tag.querySelector('.filter-tag-remove').addEventListener('click', () => {
       skillFilters.splice(i, 1);
       renderSkillTags();
@@ -359,8 +354,13 @@ document.getElementById('resetBtn').addEventListener('click', () => {
 // ===== 技能1件の合計値 =====
 // 合計値(sumPoint)が無いときは各ポイントから計算する。
 // 母国語・回避は初期値が未設定(0)のとき、能力値から補う。
+// 職業・興味・成長・その他ポイントの合計(初期値は含まない)
+function skillExtra(sk) {
+  return (sk.professionPoint||0) + (sk.interestPoint||0) + (sk.growthPoint||0) + (sk.otherPoint||0);
+}
+
 function calcSkillValue(ch, sk) {
-  const extra = (sk.professionPoint||0) + (sk.interestPoint||0) + (sk.growthPoint||0) + (sk.otherPoint||0);
+  const extra = skillExtra(sk);
   const noDefault = sk.defaultPoint === undefined || sk.defaultPoint === 0;
   if (sk.name === '母国語' && noDefault) {
     return getAbilityValue(ch, 'edu') * (currentVer === '7' ? 1 : 5) + extra;
@@ -411,8 +411,7 @@ function getTopSkills(ch, highlightNames) {
       const fullName = skillDisplayName(sk);
       const baseName = fullName.replace(/（.*）$/, '');
       const isHighlighted = highlightNames.has(fullName) || (GROUP_SKILLS.has(baseName) && highlightNames.has(baseName));
-      const extraPoints = (sk.professionPoint||0)+(sk.interestPoint||0)+(sk.growthPoint||0)+(sk.otherPoint||0);
-      if (isHighlighted || extraPoints > 0 || (sk.sumPoint !== undefined && sk.sumPoint > (sk.defaultPoint||0))) {
+      if (isHighlighted || skillExtra(sk) > 0 || (sk.sumPoint !== undefined && sk.sumPoint > (sk.defaultPoint||0))) {
         all.push({ name: fullName, val, isHighlighted });
       }
     });
@@ -430,10 +429,8 @@ function renderCards() {
   const nameQ = document.getElementById('nameSearch').value.trim().toLowerCase();
   const showLost = showLostCb.checked;
 
-  const filtered = allChars.filter(ch => {
-    const ver = (ch.data?.version || '7th').startsWith(currentVer);
-    if (!ver) return false;
-
+  const inVer = allChars.filter(isCurrentVer);
+  const filtered = inVer.filter(ch => {
     // Name search
     const name = (ch.data?.profile?.name || '').toLowerCase();
     const furi = (ch.data?.profile?.furi || '').toLowerCase();
@@ -445,12 +442,7 @@ function renderCards() {
     // Ability filters
     for (const [ab, minVal] of Object.entries(abilityMinMap)) {
       if (minVal <= 0) continue;
-      if (ab === 'SAN') {
-        const sanVal = ch.data?.abilities?.sanCurrent ?? 0;
-        if (sanVal < minVal) return false;
-        continue;
-      }
-      const key = cfg.abilityKeys[ab];
+      const key = ab === 'SAN' ? 'san' : cfg.abilityKeys[ab];
       if (!key) continue;
       if (getAbilityValue(ch, key) < minVal) return false;
     }
@@ -466,8 +458,7 @@ function renderCards() {
 
   const grid = document.getElementById('cardGrid');
   const countEl = document.getElementById('resultCount');
-  const total = allChars.filter(c => (c.data?.version||'7th').startsWith(currentVer)).length;
-  countEl.innerHTML = `<b>${filtered.length}</b> / ${total} キャラクター`;
+  countEl.innerHTML = `<b>${filtered.length}</b> / ${inVer.length} キャラクター`;
 
   if (filtered.length === 0) {
     grid.innerHTML = '<div class="empty-state">条件に一致するキャラクターが見つかりません</div>';
@@ -539,12 +530,9 @@ function renderCards() {
 
     // Skills
     const topSkills = getTopSkills(ch, hlNames);
-    const skillHtml = topSkills.map(s => {
-      // GROUP_SKILLSのフィルターは親名だけで照合
-      const baseName = s.name.replace(/（.*）$/, '');
-      const isHl = hlNames.has(s.name) || (GROUP_SKILLS.has(baseName) && hlNames.has(baseName));
-      return `<span class="skill-pill${isHl ? ' highlight' : ''}">${esc(s.name)} ${s.val}</span>`;
-    }).join('');
+    const skillHtml = topSkills.map(s =>
+      `<span class="skill-pill${s.isHighlighted ? ' highlight' : ''}">${esc(s.name)} ${s.val}</span>`
+    ).join('');
 
     const subParts = [];
     if (furi) subParts.push(furi);
@@ -597,7 +585,7 @@ renderAbilityFilters();
 const savedTheme = localStorage.getItem('coc_theme');
 if (savedTheme === 'light') {
   document.documentElement.classList.add('light');
-  document.getElementById('themeBtn').textContent = '☽ ダーク';
+  themeBtn.textContent = '☽ ダーク';
 }
 const savedVer = localStorage.getItem('coc_ver');
 if (savedVer && savedVer !== currentVer) {
@@ -624,7 +612,7 @@ function closeHelp() {
   document.getElementById('helpOverlay').classList.remove('open');
 }
 
-document.getElementById('helpBtn')?.addEventListener('click', openHelp);
-document.getElementById('helpClose')?.addEventListener('click', closeHelp);
-document.getElementById('helpOverlay')?.addEventListener('click', closeHelp);
-document.querySelector('.help-modal')?.addEventListener('click', e => e.stopPropagation());
+document.getElementById('helpBtn').addEventListener('click', openHelp);
+document.getElementById('helpClose').addEventListener('click', closeHelp);
+document.getElementById('helpOverlay').addEventListener('click', closeHelp);
+document.querySelector('.help-modal').addEventListener('click', e => e.stopPropagation());

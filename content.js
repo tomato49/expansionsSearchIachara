@@ -75,8 +75,7 @@ function openViewer() {
   }
   if (!latest) return;
   try {
-    const p = chrome.runtime.sendMessage({ type: 'OPEN_VIEWER', data: latest });
-    if (p && typeof p.catch === 'function') p.catch(onSendError);
+    chrome.runtime.sendMessage({ type: 'OPEN_VIEWER', data: latest }).catch(onSendError);
   } catch (err) {
     onSendError(err);
   }

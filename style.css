@@ -85,12 +85,11 @@
   .ver-tabs {
     display: flex;
     gap: 4px;
-    width: 100%;
-  }
+    }
   .ver-tab {
     font-family: 'Shippori Mincho', serif;
-    font-size: 12px;
-    padding: 5px 14px;
+    font-size: 14px;
+    padding: 6px 18px;
     border-radius: 20px;
     border: 1px solid var(--border2);
     background: transparent;
@@ -193,12 +192,7 @@
   input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.2); }
 
   /* Skill filter */
-  .skill-filter-row {
-    display: flex;
-    gap: 6px;
-    margin-bottom: 8px;
-  }
-  .skill-combo { position: relative; flex: 1; }
+  .skill-combo { position: relative; margin-bottom: 8px; }
   .skill-combo-input {
     width: 100%;
     background: var(--surface2);
@@ -344,35 +338,26 @@
   .result-count b { color: var(--accent2); }
 
   /* Paste area */
-  .paste-area {
+  .no-data {
     flex: 1;
-    display: flex;
-    flex-direction: row;
-    align-items: flex-start;
-    gap: 24px;
-    padding: 24px;
-    overflow-y: auto;
-  }
-  .paste-input-area {
-    flex: 1;
-    min-width: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 12px;
-    padding-top: 8px;
+    padding: 32px 24px 24px;
+    overflow-y: auto;
   }
-  .paste-icon {
+  .no-data-icon {
     font-family: 'IBM Plex Mono', monospace;
     font-size: 36px;
     color: var(--border2);
   }
-  .paste-title {
+  .no-data-title {
     font-size: 15px;
     font-weight: 500;
     color: var(--text2);
   }
-  .paste-sub { font-size: 12px; color: var(--text3); text-align: center; line-height: 1.7; }
+  .no-data-sub { font-size: 12px; color: var(--text3); text-align: center; line-height: 1.7; }
 
   /* Card grid */
   .card-grid {

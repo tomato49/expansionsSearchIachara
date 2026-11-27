@@ -36,11 +36,9 @@
 
     <div class="sidebar-section">
       <div class="sec-label">技能フィルター</div>
-      <div class="skill-filter-row" style="flex-direction:column;">
       <div class="skill-combo">
         <input type="text" class="skill-combo-input" id="skillComboInput" placeholder="技能を検索..." autocomplete="off" />
         <div class="skill-dropdown" id="skillDropdown"></div>
-      </div>
       </div>
       <div class="skill-threshold-row">
         <div class="ability-head">
@@ -73,9 +71,9 @@
   <div class="main">
     <div class="header">
       <div style="flex:1;display:flex;align-items:center;gap:8px;justify-content:flex-start;">
-        <div class="ver-tabs" style="width:auto;">
-          <button class="ver-tab" data-ver="7" style="font-size:14px;padding:6px 18px;">7版</button>
-          <button class="ver-tab active" data-ver="6" style="font-size:14px;padding:6px 18px;">6版</button>
+        <div class="ver-tabs">
+          <button class="ver-tab" data-ver="7">7版</button>
+          <button class="ver-tab active" data-ver="6">6版</button>
         </div>
         <button class="theme-btn" id="themeBtn">☀ ライト</button>
       </div>
@@ -87,12 +85,10 @@
     <div class="main-header">
       <span class="result-count" id="resultCount">データなし</span>
     </div>
-    <div id="pasteArea" class="paste-area">
-      <div class="paste-input-area">
-        <div class="paste-icon">{  }</div>
-        <div class="paste-title">データがありません</div>
-        <div class="paste-sub"><a href="https://iachara.com/mypage" target="_blank" rel="noopener" class="guide-link">いあきゃらのマイページ</a>を開き、<br>左下のアイコンから開いてください</div>
-      </div>
+    <div id="noData" class="no-data">
+      <div class="no-data-icon">{  }</div>
+      <div class="no-data-title">データがありません</div>
+      <div class="no-data-sub"><a href="https://iachara.com/mypage" target="_blank" rel="noopener" class="guide-link">いあきゃらのマイページ</a>を開き、<br>左下のアイコンから開いてください</div>
     </div>
     <div id="cardGrid" class="card-grid" style="display:none;"></div>
   </div>
