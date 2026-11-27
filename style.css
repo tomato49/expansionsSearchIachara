@@ -1,5 +1,4 @@
   :root {
-    --bg: #0f0f11;
     --surface: #18181c;
     --surface2: #22222a;
     --border: #2e2e3a;
@@ -14,15 +13,10 @@
     --skill-bg: rgba(74,222,128,0.1);
     --red: #e05555;
     --red-bg: rgba(248,113,113,0.1);
-    --derived: #ea8c00;
-    --derived-bg: rgba(234,140,0,0.1);
-    --derived: #ea8c00;
-    --derived-bg: rgba(234,140,0,0.1);
     --radius: 8px;
     --radius-lg: 12px;
   }
   :root.light {
-    --bg: #e2e2e8;
     --surface: #eaeaee;
     --surface2: #dddde4;
     --border: #ceceda;
@@ -37,10 +31,6 @@
     --skill-bg: rgba(15,118,110,0.08);
     --red: #dc2626;
     --red-bg: rgba(220,38,38,0.08);
-    --derived: #a07000;
-    --derived-bg: rgba(160,112,0,0.08);
-    --derived: #a07000;
-    --derived-bg: rgba(160,112,0,0.08);
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body {
@@ -512,10 +502,6 @@
     text-decoration: none;
     border-bottom: 1px solid rgba(176,144,240,0.4);
     transition: border-color 0.15s;
-  }
-  @keyframes lbIn {
-    from { opacity: 0; transform: scale(0.96); }
-    to   { opacity: 1; transform: scale(1); }
   }
 
   /* ===== ヘルプボタン ===== */
